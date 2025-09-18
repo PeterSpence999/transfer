@@ -1,24 +1,14 @@
 using Colors, Images, FileIO, ColorSchemes, Plots
-using Base.Threads
+using Base.Threads, Printf
+include("MOD_mandel_PJS.jl")
+using .MOD_mandel_PJS
 pyplot()
-#******************************************************************
-function fn_mandel(cnum,max_iter,iter_pow)
-    zn=0.0+0.0im
-    for cnt in 1:max_iter
-        zn1=zn^iter_pow+cnum
-        magz=abs(zn1)
-        if magz>2.0
-            return cnt
-        end
-        zn=zn1
-    end
-    return max_iter
-end
 #******************************************************************
 println("Enter iteration power: ")
 iter_pow=parse(Float64,readline())
 println("Enter colour scale power: ")
 col_pow=parse(Float64,readline())
+#******************************************************************
 max_iter=511
 nx,ny=2001, 1001
 #xs,xe=0.375, 0.4
@@ -30,7 +20,9 @@ dy=(ye-ys)/(ny-1)
 x=range(xs,xe,length=nx)
 y=range(ys,ye,length=ny)
 mandelmat=Array{Int}(undef,ny,nx) #matrix of iterations
+#******************************************************************
 stime=time()
+#for j in 1:ny #serial
 @threads for j in 1:ny
     for i in 1:nx
         cnum=x[i]+y[j]*im
@@ -38,10 +30,17 @@ stime=time()
     end
 end
 elapsed=time()-stime
-println("Time taken=$elapsed seconds")
+tits=sum(mandelmat)
+println("Total number of iterations=$tits")
+println("Time taken=$(round(elapsed, digits=4)) seconds")
+cps=tits/elapsed
+cps_formatted=@sprintf("%.4e",cps)
+println("Iterations per second=$cps_formatted")
+#******************************************************************
 yout=vcat(-1.0.*reverse(y[2:end,1]),y); #reflect y to create full range
 finalmat=(vcat(reverse(mandelmat[2:end,:],dims=1),mandelmat)./max_iter).^col_pow #add y reflected mandelbrot set and scale
-p=heatmap(x,yout,finalmat, c=:viridis, aspect_ratio=:equal)
+#p=heatmap(x,yout,finalmat, c=:coolwarm, aspect_ratio=:equal)
+p=heatmap(x,yout,finalmat, c=:batlow, aspect_ratio=:equal)
 display(p)
 savefig(p,"mandelbrot1a.png")
 #******************************************************************
@@ -54,4 +53,5 @@ a4_width, a4_height=3508, 2480
 resized_img = imresize(rgb_img, (a4_width, a4_height))
 save("mandelbrot_a4_landscape.png", resized_img)
 #******************************************************************
-println("End")
+
+println("Complete")
